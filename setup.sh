@@ -1,64 +1,56 @@
 #!/bin/bash
-# Sekwang Minecraft Server 설치 스크립트
-# Ubuntu 22.04 / 24.04 지원
+# Sekwang Minecraft Server 자동 설치 스크립트
 
 set -e
 
-echo "========================================"
+echo "=========================================="
 echo "  Sekwang Minecraft Server 설치 스크립트"
-echo "========================================"
-
-# 색상 정의
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+echo "=========================================="
 
 # 변수 설정
 MINECRAFT_DIR="$HOME/minecraft"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BDS_VERSION="1.21.51.02"  # 필요시 버전 업데이트
+BEDROCK_VERSION="1.21.50.07"
+BEDROCK_URL="https://www.minecraft.net/bedrockdedicatedserver/bin-linux/bedrock-server-${BEDROCK_VERSION}.zip"
+BACKEND_URL="${BACKEND_URL:-http://43.200.61.18:8080/api/minecraft}"
 
-echo -e "${YELLOW}[1/6] 시스템 패키지 업데이트...${NC}"
-sudo apt-get update -y
-sudo apt-get install -y curl wget unzip screen python3
+# 1. 필수 패키지 설치
+echo "[1/7] 필수 패키지 설치 중..."
+sudo apt-get update
+sudo apt-get install -y unzip curl python3 libcurl4
 
-echo -e "${YELLOW}[2/6] 마인크래프트 베드락 서버 다운로드...${NC}"
+# 2. 마인크래프트 서버 디렉토리 생성
+echo "[2/7] 디렉토리 생성 중..."
 mkdir -p "$MINECRAFT_DIR"
 cd "$MINECRAFT_DIR"
 
-if [ ! -f "bedrock_server" ]; then
-    echo "베드락 서버 다운로드 중..."
-    wget -q "https://minecraft.azureedge.net/bin-linux/bedrock-server-${BDS_VERSION}.zip" -O bedrock-server.zip
+# 3. 베드락 서버 다운로드 (이미 있으면 스킵)
+if [ ! -f "$MINECRAFT_DIR/bedrock_server" ]; then
+    echo "[3/7] 베드락 서버 다운로드 중..."
+    curl -o bedrock-server.zip "$BEDROCK_URL" || {
+        echo "다운로드 실패. 수동으로 https://www.minecraft.net/en-us/download/server/bedrock 에서 다운로드하세요."
+        exit 1
+    }
     unzip -o bedrock-server.zip
     rm bedrock-server.zip
     chmod +x bedrock_server
-    echo -e "${GREEN}베드락 서버 다운로드 완료!${NC}"
 else
-    echo "베드락 서버가 이미 존재합니다. 스킵..."
+    echo "[3/7] 베드락 서버가 이미 설치되어 있습니다. 스킵..."
 fi
 
-echo -e "${YELLOW}[3/6] Event Logger 애드온 설치...${NC}"
-mkdir -p "$MINECRAFT_DIR/behavior_packs/event_logger_addon"
-cp -r "$SCRIPT_DIR/event_logger_addon/"* "$MINECRAFT_DIR/behavior_packs/event_logger_addon/"
-echo -e "${GREEN}애드온 설치 완료!${NC}"
+# 4. 이벤트 로거 애드온 설치
+echo "[4/7] 이벤트 로거 애드온 설치 중..."
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cp -r "$SCRIPT_DIR/event_logger_addon" "$MINECRAFT_DIR/behavior_packs/"
 
-echo -e "${YELLOW}[4/6] 월드 설정...${NC}"
-mkdir -p "$MINECRAFT_DIR/worlds/Bedrock level"
-cp "$SCRIPT_DIR/world_behavior_packs.json" "$MINECRAFT_DIR/worlds/Bedrock level/"
-
-# Beta APIs 활성화 (기존 level.dat이 있으면)
-if [ -f "$MINECRAFT_DIR/worlds/Bedrock level/level.dat" ]; then
-    echo "기존 월드에 Beta APIs 활성화 중..."
-    python3 "$SCRIPT_DIR/enable_beta_apis.py" || true
-fi
-echo -e "${GREEN}월드 설정 완료!${NC}"
-
-echo -e "${YELLOW}[5/6] 로그 모니터 설치...${NC}"
-cp "$SCRIPT_DIR/log_monitor.sh" "$MINECRAFT_DIR/"
+# 5. 로그 모니터 스크립트 복사 및 백엔드 URL 설정
+echo "[5/7] 로그 모니터 설치 중..."
+sed "s|http://43.200.61.18:8080/api/minecraft|$BACKEND_URL|g" "$SCRIPT_DIR/log_monitor.sh" > "$MINECRAFT_DIR/log_monitor.sh"
 chmod +x "$MINECRAFT_DIR/log_monitor.sh"
 
-# systemd 서비스 생성 - 마인크래프트
+# 6. systemd 서비스 파일 생성
+echo "[6/7] systemd 서비스 설정 중..."
+
+# 마인크래프트 서버 서비스
 sudo tee /etc/systemd/system/minecraft.service > /dev/null << EOF
 [Unit]
 Description=Minecraft Bedrock Server
@@ -76,7 +68,7 @@ RestartSec=5
 WantedBy=multi-user.target
 EOF
 
-# systemd 서비스 생성 - 로그 모니터
+# 로그 모니터 서비스
 sudo tee /etc/systemd/system/mc-monitor.service > /dev/null << EOF
 [Unit]
 Description=Minecraft Log Monitor
@@ -87,38 +79,35 @@ Requires=minecraft.service
 Type=simple
 User=$USER
 WorkingDirectory=$MINECRAFT_DIR
-ExecStart=/bin/bash $MINECRAFT_DIR/log_monitor.sh
-Restart=on-failure
-RestartSec=10
+ExecStart=$MINECRAFT_DIR/log_monitor.sh
+Restart=always
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
 sudo systemctl daemon-reload
-echo -e "${GREEN}서비스 설치 완료!${NC}"
 
-echo -e "${YELLOW}[6/6] 방화벽 설정...${NC}"
-sudo ufw allow 19132/udp 2>/dev/null || true
-sudo ufw allow 19133/udp 2>/dev/null || true
-echo -e "${GREEN}방화벽 설정 완료!${NC}"
+# 7. 월드 설정 (첫 실행 후에만)
+echo "[7/7] 서버 설정 완료!"
 
 echo ""
-echo -e "${GREEN}========================================"
+echo "=========================================="
 echo "  설치 완료!"
-echo "========================================${NC}"
+echo "=========================================="
 echo ""
-echo "서버 시작:    sudo systemctl start minecraft"
-echo "서버 중지:    sudo systemctl stop minecraft"
-echo "서버 로그:    sudo journalctl -u minecraft -f"
+echo "다음 단계:"
+echo "1. 서버 시작: sudo systemctl start minecraft"
+echo "2. 서버가 월드를 생성할 때까지 대기 (약 10초)"
+echo "3. 서버 중지: sudo systemctl stop minecraft"
+echo "4. Beta APIs 활성화:"
+echo "   python3 $SCRIPT_DIR/enable_beta_apis.py"
+echo "5. behavior pack 적용:"
+echo "   cp $SCRIPT_DIR/world_behavior_packs.json '$MINECRAFT_DIR/worlds/Bedrock level/'"
+echo "6. 서버 및 모니터 시작:"
+echo "   sudo systemctl enable --now minecraft"
+echo "   sudo systemctl enable --now mc-monitor"
 echo ""
-echo "로그 모니터 시작: sudo systemctl start mc-monitor"
-echo "로그 모니터 로그: sudo journalctl -u mc-monitor -f"
-echo ""
-echo -e "${YELLOW}⚠️  백엔드 URL을 설정하세요:${NC}"
-echo "    nano $MINECRAFT_DIR/log_monitor.sh"
-echo "    BACKEND_URL 변수를 수정하세요"
-echo ""
-echo -e "${YELLOW}⚠️  서비스 자동 시작 활성화:${NC}"
-echo "    sudo systemctl enable minecraft"
-echo "    sudo systemctl enable mc-monitor"
+echo "백엔드 URL: $BACKEND_URL"
+echo "포트: 19132 (UDP)"

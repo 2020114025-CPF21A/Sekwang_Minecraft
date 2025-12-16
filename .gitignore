@@ -1,20 +1,24 @@
 # Node modules (mc-proxy)
 node_modules/
 
-# 로그 파일
+# Python cache
+__pycache__/
+*.pyc
+
+# Minecraft server files (다운로드 필요)
+bedrock_server
+*.zip
+
+# Logs
 *.log
 
-# PocketMine (사용 안 함)
+# PocketMine (사용하지 않음)
 pocketmine_plugin/
 
-# 프록시 (사용 안 함)
+# mc-proxy (사용하지 않음)
 mc-proxy/
 
 # 임시 파일
+*.backup
+*.backup2
 *.tmp
-*.bak
-*.backup*
-
-# OS 파일
-.DS_Store
-Thumbs.db

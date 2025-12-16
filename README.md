@@ -1,74 +1,67 @@
 # Sekwang Minecraft Server
 
-마인크래프트 베드락 전용 서버 + 이벤트 로깅 시스템
+마인크래프트 베드락 서버 + 이벤트 로깅 시스템
 
-## 📦 구성 요소
+## 🎮 기능
 
-- **Bedrock Dedicated Server (BDS)** - 공식 마인크래프트 베드락 서버
-- **Event Logger Addon** - 채팅, 사망, 리스폰 이벤트를 서버 로그에 기록
-- **Log Monitor** - 서버 로그를 감시하여 백엔드 API로 이벤트 전송
+- **채팅 로깅** - 플레이어 채팅 메시지 캡처
+- **사망 이벤트** - 죽음 원인과 함께 기록
+- **접속/퇴장** - 플레이어 입퇴장 기록
+- **리스폰** - 죽고 다시 살아날 때 기록
 
-## 🚀 빠른 설치
+## 📁 구조
+
+```
+Sekwang_Minecraft/
+├── event_logger_addon/     # 마인크래프트 스크립트 API 애드온
+│   ├── manifest.json       # 애드온 설정 (Beta APIs 2.5.0-beta)
+│   └── scripts/main.js     # 이벤트 핸들러
+├── log_monitor.sh          # 로그 모니터링 스크립트
+├── enable_beta_apis.py     # level.dat에 Beta APIs 활성화
+├── setup.sh                # 서버 설치 스크립트
+└── world_behavior_packs.json # 월드 behavior pack 설정
+```
+
+## 🚀 설치 방법
+
+### 1. 서버에서 실행
 
 ```bash
-# 저장소 클론
 git clone https://github.com/2020114025-CPF21A/Sekwang_Minecraft.git
 cd Sekwang_Minecraft
-
-# 설치 스크립트 실행 (Ubuntu 22.04/24.04)
 chmod +x setup.sh
 ./setup.sh
 ```
 
-## 📁 폴더 구조
+### 2. 수동 설치
 
-```
-Sekwang_Minecraft/
-├── event_logger_addon/      # 베드락 스크립트 API 애드온
-│   ├── manifest.json
-│   └── scripts/main.js
-├── log_monitor.sh           # 로그 모니터링 스크립트
-├── world_behavior_packs.json # 월드 애드온 설정
-├── enable_beta_apis.py      # Beta API 활성화 스크립트
-├── setup.sh                 # 자동 설치 스크립트
-└── README.md
-```
+1. 마인크래프트 베드락 서버 다운로드 및 설치
+2. `event_logger_addon` 폴더를 `behavior_packs/`에 복사
+3. `world_behavior_packs.json`을 월드 폴더에 복사
+4. `enable_beta_apis.py` 실행하여 Beta APIs 활성화
+5. `log_monitor.sh`를 systemd 서비스로 등록
 
-## ⚙️ 설정
+## ⚙️ 환경 변수
 
-### 백엔드 URL 변경
-
-`log_monitor.sh` 파일에서 백엔드 URL을 변경하세요:
-
+`log_monitor.sh`에서 백엔드 URL 수정:
 ```bash
 BACKEND_URL="http://YOUR_BACKEND_IP:8080/api/minecraft"
 ```
 
-### 포트 설정
+## 📡 API 엔드포인트
 
-- **19132** - 마인크래프트 기본 포트 (UDP)
-- **19133** - IPv6 포트 (UDP)
+로그 모니터가 호출하는 API:
+- `GET /api/minecraft/log/join?player={name}` - 접속
+- `GET /api/minecraft/log/leave?player={name}` - 퇴장
+- `GET /api/minecraft/event?type={type}&player={name}&message={msg}` - 이벤트
 
-방화벽에서 UDP 19132 포트를 열어주세요.
+## 🔧 요구사항
 
-## 🎮 기능
+- Ubuntu 22.04+ (또는 호환 Linux)
+- Python 3.x (URL 인코딩용)
+- curl
+- 마인크래프트 베드락 서버 1.21.x
 
-### 캡처되는 이벤트
-
-| 이벤트 | 설명 |
-|--------|------|
-| CHAT | 플레이어 채팅 메시지 |
-| DEATH | 플레이어 사망 (원인 포함) |
-| RESPAWN | 플레이어 리스폰 |
-| SPAWN | 플레이어 첫 스폰 (접속) |
-| JOIN | 서버 접속 |
-| LEAVE | 서버 퇴장 |
-
-### Beta APIs
-
-채팅 이벤트를 캡처하려면 월드에서 **Beta APIs 실험**이 활성화되어야 합니다.
-`enable_beta_apis.py` 스크립트로 기존 월드에 Beta APIs를 활성화할 수 있습니다.
-
-## 📄 라이선스
+## 📝 라이선스
 
 MIT License
