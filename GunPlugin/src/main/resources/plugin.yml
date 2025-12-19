@@ -1,0 +1,17 @@
+name: GunPlugin
+version: 1.0.0
+main: com.sekwang.gun.GunPlugin
+api-version: '1.21'
+description: Custom 3D Gun Plugin for Java and Bedrock
+author: Sekwang
+
+commands:
+  gun:
+    description: Get guns and ammo
+    usage: /gun <pistol|rifle|ammo>
+    permission: gunplugin.use
+    
+permissions:
+  gunplugin.use:
+    description: Allows using the /gun command
+    default: true

@@ -1,0 +1,28 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.sekwang'
+version = '1.0.0'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+repositories {
+    mavenCentral()
+    maven { url = 'https://repo.papermc.io/repository/maven-public/' }
+}
+
+dependencies {
+    compileOnly 'io.papermc.paper:paper-api:1.21.4-R0.1-SNAPSHOT'
+}
+
+tasks.jar {
+    from(sourceSets.main.output)
+}
+
+processResources {
+    expand(project.properties)
+}

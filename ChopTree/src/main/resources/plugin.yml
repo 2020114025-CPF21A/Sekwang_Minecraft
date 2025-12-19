@@ -1,0 +1,6 @@
+name: ChopTree
+version: 1.0.0
+main: com.sekwang.choptree.ChopTreePlugin
+api-version: '1.21'
+description: Simple tree chopping plugin
+author: Sekwang

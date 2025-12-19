@@ -1,0 +1,13 @@
+name: GunPlugin
+version: 1.0.0
+main: com.sekwang.gun.GunPlugin
+api-version: '1.21'
+description: Custom 3D Gun Plugin
+author: Sekwang
+commands:
+  gun:
+    description: Get guns and ammo
+    usage: /gun <pistol|rifle|ammo>
+permissions:
+  gunplugin.use:
+    default: true
